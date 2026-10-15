@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vehicle Rental Dashboard</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a rental-counter board. Loader strip, four totals, fleet cards beside two charts, history ledger below. */
+:root {
+  --bg: #eef1f3;
+  --surface: #ffffff;
+  --surface-2: #f5f7f8;
+  --line: #d6dde2;
+  --fg: #16232c;
+  --muted: #5b6b76;
+  --accent: #c7781a;
+  --accent-soft: #f6e6cf;
+  --ok: #1f7a4d;
+  --ok-soft: #dcf0e5;
+  --busy: #b33a2e;
+  --busy-soft: #f7e0dd;
+  --bar-avail: #3d8a63;
+  --bar-rent: #c7781a;
+  --plate-white: #fbfbf7;
+  --plate-yellow: #f2c230;
+  --plate-ink: #111111;
+  --plate-edge: #2a2a2a;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171c;
+    --surface: #16222a;
+    --surface-2: #1b2932;
+    --line: #2a3a44;
+    --fg: #e4ebef;
+    --muted: #93a4ae;
+    --accent: #e89a3c;
+    --accent-soft: #3a2a17;
+    --ok: #5fc48f;
+    --ok-soft: #173326;
+    --busy: #ef7f72;
+    --busy-soft: #3b1f1c;
+    --bar-avail: #4fae7e;
+    --bar-rent: #e89a3c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171c;
+  --surface: #16222a;
+  --surface-2: #1b2932;
+  --line: #2a3a44;
+  --fg: #e4ebef;
+  --muted: #93a4ae;
+  --accent: #e89a3c;
+  --accent-soft: #3a2a17;
+  --ok: #5fc48f;
+  --ok-soft: #173326;
+  --busy: #ef7f72;
+  --busy-soft: #3b1f1c;
+  --bar-avail: #4fae7e;
+  --bar-rent: #e89a3c;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding-block: 28px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 22px;
+}
+
+/* Header */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+.eyebrow {
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted); margin: 0 0 4px;
+}
+h1 {
+  font-family: var(--font-display); font-weight: 700; font-size: clamp(30px, 5vw, 44px);
+  line-height: 1; margin: 0; letter-spacing: .01em; text-wrap: balance;
+}
+h1 span { color: var(--accent); }
+.source-chip {
+  font-family: var(--font-mono); font-size: 12px; padding: 5px 10px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--fg); border: 1px solid var(--line); white-space: nowrap;
+}
+.source-chip.live { background: var(--ok-soft); }
+
+/* Loader */
+.loader {
+  background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius);
+  padding: 16px 18px; display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center;
+  transition: border-color .15s, background .15s;
+}
+.loader.drag { border-color: var(--accent); background: var(--accent-soft); }
+.loader p { margin: 0; flex: 1 1 320px; min-width: 0; color: var(--muted); font-size: 14px; }
+.loader p code { font-family: var(--font-mono); color: var(--fg); font-size: 13px; }
+.btn {
+  font: 600 14px var(--font-body); border-radius: 8px; padding: 9px 14px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--fg);
+}
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #1a1006; }
+.btn:hover { filter: brightness(1.05); }
+.btn:focus-visible, input:focus-visible, .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+#status { font-size: 13px; margin: 0; width: 100%; color: var(--muted); }
+#status.err { color: var(--busy); }
+
+/* KPI tiles */
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+.kpi .label { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.kpi .value { font-family: var(--font-display); font-weight: 600; font-size: 34px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kpi .sub { font-size: 12px; color: var(--muted); }
+.kpi.revenue .value { color: var(--accent); }
+
+/* Main grid */
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; align-items: start; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; min-width: 0; }
+.panel h2 {
+  font-family: var(--font-display); font-weight: 600; font-size: 22px; margin: 0; letter-spacing: .02em;
+}
+.panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.side { display: grid; gap: 22px; min-width: 0; }
+
+/* Filters */
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button {
+  font: 500 13px var(--font-body); border: 0; background: var(--surface-2); color: var(--muted);
+  padding: 6px 10px; cursor: pointer; border-right: 1px solid var(--line);
+}
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+#search {
+  font: 14px var(--font-body); padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface-2); color: var(--fg); width: 170px; max-width: 100%;
+}
+
+/* Vehicle cards */
+.fleet { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.car {
+  border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; background: var(--surface-2);
+  display: grid; gap: 8px; align-content: start;
+}
+.car-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.plate {
+  font-family: var(--font-mono); font-weight: 600; font-size: 13px; letter-spacing: .12em;
+  color: var(--plate-ink); background: var(--plate-white); border: 2px solid var(--plate-edge);
+  border-radius: 4px; padding: 1px 8px; white-space: nowrap;
+}
+.plate.commercial { background: var(--plate-yellow); }
+.pill { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.busy { background: var(--busy-soft); color: var(--busy); }
+.model { font-family: var(--font-display); font-weight: 600; font-size: 21px; line-height: 1.15; margin: 0; overflow-wrap: anywhere; }
+.meta { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.rate { font-family: var(--font-mono); font-size: 14px; font-variant-numeric: tabular-nums; }
+.rate small { color: var(--muted); font-size: 12px; }
+.booking {
+  border-top: 1px dashed var(--line); padding-top: 8px; font-size: 13px; display: grid; gap: 2px;
+}
+.booking b { font-weight: 600; }
+.booking .est { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.empty { color: var(--muted); font-size: 14px; padding: 18px 0; text-align: center; grid-column: 1 / -1; }
+
+/* Charts */
+.chart { display: grid; gap: 12px; }
+.bar-row { display: grid; gap: 4px; }
+.bar-label { display: flex; justify-content: space-between; font-size: 13px; gap: 8px; }
+.bar-label span:last-child { font-family: var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.track { height: 14px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--line); display: flex; overflow: hidden; }
+.seg-avail { background: var(--bar-avail); }
+.seg-rent { background: var(--bar-rent); }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.chart-note { font-size: 12px; color: var(--muted); margin: 0; }
+
+/* History ledger */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
+th {
+  text-align: left; font-family: var(--font-mono); font-weight: 500; font-size: 11px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line);
+}
+td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+td.num { font-family: var(--font-mono); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+th.num { text-align: right; }
+tr:last-child td { border-bottom: 0; }
+.tag { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: .06em; padding: 2px 7px; border-radius: 4px; }
+.tag.out { background: var(--accent-soft); color: var(--accent); }
+.tag.in { background: var(--ok-soft); color: var(--ok); }
+
+.foot { font-size: 12px; color: var(--muted); margin: 0; }
+.foot code { font-family: var(--font-mono); }
+
+@media (max-width: 900px) {
+  .main { grid-template-columns: minmax(0, 1fr); }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">C Programming Project · Fleet Board</p>
+      <h1>Vehicle Rental <span>Dashboard</span></h1>
+    </div>
+    <span id="sourceChip" class="source-chip">Showing sample data</span>
+  </header>
+
+  <section class="loader" id="dropZone" aria-label="Load data files">
+   <div class="btns">
+      <button class="btn primary" id="pickBtn" type="button">Load files</button>
+      <button class="btn" id="sampleBtn" type="button">Show sample data</button>
+    </div>
+    <input type="file" id="fileInput" accept=".txt,text/plain" multiple hidden>
+    <p id="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="kpis" aria-label="Totals">
+    <div class="kpi"><div class="label">Total fleet</div><div class="value" id="kTotal">0</div><div class="sub" id="kMix">—</div></div>
+    <div class="kpi"><div class="label">Available</div><div class="value" id="kAvail">0</div><div class="sub" id="kAvailPct">—</div></div>
+    <div class="kpi"><div class="label">Rented now</div><div class="value" id="kRented">0</div><div class="sub" id="kRentedSub">—</div></div>
+    <div class="kpi revenue"><div class="label">Revenue collected</div><div class="value" id="kRevenue">₹0</div><div class="sub">Incl. late fees and 18% GST</div></div>
+  </section>
+
+  <div class="main">
+    <section class="panel" aria-labelledby="fleetHead">
+      <div class="panel-head">
+        <h2 id="fleetHead">Fleet</h2>
+        <div class="filters">
+          <div class="seg" role="group" aria-label="Filter by type" id="typeSeg">
+            <button type="button" data-type="ALL" aria-pressed="true">All</button>
+            <button type="button" data-type="C" aria-pressed="false">Cars</button>
+            <button type="button" data-type="B" aria-pressed="false">Bikes</button>
+            <button type="button" data-type="T" aria-pressed="false">Trucks</button>
+          </div>
+          <div class="seg" role="group" aria-label="Filter by status" id="statusSeg">
+            <button type="button" data-status="ALL" aria-pressed="true">Any</button>
+            <button type="button" data-status="1" aria-pressed="false">Available</button>
+            <button type="button" data-status="0" aria-pressed="false">Rented</button>
+          </div>
+          <input id="search" type="search" placeholder="Search model" aria-label="Search by model name">
+        </div>
+      </div>
+      <div class="fleet" id="fleet"></div>
+    </section>
+
+    <aside class="side">
+      <section class="panel" aria-labelledby="typeHead">
+        <div class="panel-head"><h2 id="typeHead">Fleet by type</h2></div>
+        <div class="chart" id="typeChart"></div>
+        <div class="legend" style="margin-top:12px">
+          <span><i style="background:var(--bar-avail)"></i>Available</span>
+          <span><i style="background:var(--bar-rent)"></i>Rented</span>
+        </div>
+      </section>
+      <section class="panel" aria-labelledby="revHead">
+        <div class="panel-head"><h2 id="revHead">Revenue by vehicle</h2></div>
+        <div class="chart" id="revChart"></div>
+        <p class="chart-note" style="margin-top:10px">From RETURNED entries in rentals.txt.</p>
+      </section>
+    </aside>
+  </div>
+
+  <section class="panel" aria-labelledby="histHead">
+    <div class="panel-head"><h2 id="histHead">Rental history</h2><span class="chart-note" id="histCount"></span></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Event</th><th>Vehicle</th><th>Customer</th><th class="num">Duration</th><th class="num">Amount</th></tr></thead>
+        <tbody id="history"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <p class="foot">Pricing on rented cards mirrors <code>carRent()</code>, <code>bikeRent()</code> and <code>truckRent()</code> from <code>vehicle_rental.c</code>. This page only reads the files; all changes are made in the C program.</p>
+</div>
+
+<script>
+(function () {
+  /* ---------- Sample data, in the exact format the C program writes ---------- */
+  var SAMPLE_FLEET = [
+    "107 13829.60 6",
+    "101 Honda_City C 1500.00 1 0 - 5 Petrol",
+    "102 Royal_Enfield B 120.00 0 1 Priya 350",
+    "103 Tata_Ace T 25.00 1 0 - 1.50",
+    "104 Maruti_Ertiga C 1800.00 0 4 Arjun 7 CNG",
+    "105 Honda_Activa B 60.00 1 0 - 110",
+    "106 Ashok_Leyland_Dost T 32.00 0 120 Sai_Logistics 2.50"
+  ].join("\n");
+
+  var SAMPLE_RENTALS = [
+    "RENTED   | ID 101 | Honda_City      | Rahul_Kumar | 3 day(s) | Rs 4500.00",
+    "RENTED   | ID 102 | Royal_Enfield   | Priya      | 1 hour(s) | Rs 276.00",
+    "RETURNED | ID 101 | Honda_City      | Rahul_Kumar | 5 day(s) | Rs 10620.00",
+    "RENTED   | ID 103 | Tata_Ace        | Meera      | 80 km(s) | Rs 2300.00",
+    "RETURNED | ID 103 | Tata_Ace        | Meera      | 80 km(s) | Rs 2714.00",
+    "RENTED   | ID 105 | Honda_Activa    | Kiran      | 4 hour(s) | Rs 240.00",
+    "RETURNED | ID 105 | Honda_Activa    | Kiran      | 6 hour(s) | Rs 495.60",
+    "RENTED   | ID 104 | Maruti_Ertiga   | Arjun      | 4 day(s) | Rs 7920.00",
+    "RENTED   | ID 106 | Ashok_Leyland_Dost | Sai_Logistics | 120 km(s) | Rs 4340.00"
+  ].join("\n");
+
+  var TYPE_NAME = { C: "Car", B: "Bike", T: "Truck" };
+  var UNIT = { C: "day", B: "hour", T: "km" };
+
+  var state = { fleet: [], revenue: 0, history: [], type: "ALL", status: "ALL", query: "" };
+
+  /* ---------- Helpers ---------- */
+  function pretty(s) { return String(s || "").replace(/_/g, " "); }
+  function rupees(n) {
+    return "₹" + Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function rupeesShort(n) { return "₹" + Math.round(n || 0).toLocaleString("en-IN"); }
+  /* "3 day(s)" -> "3 days", "1 hour(s)" -> "1 hour", "80 km(s)" -> "80 km" */
+  function niceDuration(raw) {
+    var m = raw.match(/^(\d+)\s+(\w+)\(s\)$/);
+    if (!m) return raw;
+    var n = Number(m[1]), unit = m[2];
+    if (unit === "km") return n + " km";
+    return plural(n, unit);
+  }
+  function plural(n, unit) { return n + " " + unit + (n === 1 ? "" : "s"); }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  /* Same rules as the C pricing functions (before GST) */
+  function estimate(v, units) {
+    var amount;
+    if (v.type === "C") {
+      amount = v.rate * units;
+      if (v.seats > 5) amount += amount * 0.10;
+      if (units >= 7) amount -= amount * 0.10;
+    } else if (v.type === "B") {
+      var hours = units < 2 ? 2 : units;
+      amount = v.rate * hours;
+      if (v.cc > 300) amount += amount * 0.15;
+    } else {
+      amount = v.rate * units + v.tons * 200;
+    }
+    return amount;
+  }
+
+  /* ---------- Parsers ---------- */
+  function parseFleet(text) {
+    var lines = text.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+    if (!lines.length) throw new Error("fleet.txt is empty. Add a vehicle in the C program first.");
+    var head = lines[0].split(/\s+/);
+    if (head.length !== 3 || head.some(function (x) { return isNaN(Number(x)); })) {
+      throw new Error("This doesn't look like fleet.txt. Its first line should hold three numbers: next ID, revenue and vehicle count.");
+    }
+    var fleet = [];
+    for (var i = 1; i < lines.length; i++) {
+      var t = lines[i].split(/\s+/);
+      if (t.length < 8) continue;
+      var v = {
+        id: Number(t[0]), model: t[1], type: t[2], rate: Number(t[3]),
+        available: t[4] === "1", units: Number(t[5]), rentedBy: t[6]
+      };
+      if (v.type === "C") { v.seats = Number(t[7]); v.fuel = t[8] || ""; }
+      else if (v.type === "B") { v.cc = Number(t[7]); }
+      else if (v.type === "T") { v.tons = Number(t[7]); }
+      else continue;
+      fleet.push(v);
+    }
+    return { revenue: Number(head[1]), fleet: fleet };
+  }
+
+  function parseRentals(text) {
+    return text.split(/\r?\n/).filter(function (l) { return l.indexOf("|") !== -1; }).map(function (l) {
+      var p = l.split("|").map(function (x) { return x.trim(); });
+      return {
+        action: p[0],
+        id: Number((p[1] || "").replace(/[^0-9]/g, "")),
+        model: p[2] || "",
+        customer: p[3] || "",
+        duration: niceDuration(p[4] || ""),
+        amount: Number((p[5] || "").replace(/[^0-9.]/g, ""))
+      };
+    });
+  }
+
+  function looksLikeFleet(text) {
+    var first = text.split(/\r?\n/)[0].trim().split(/\s+/);
+    return first.length === 3 && first.every(function (x) { return !isNaN(Number(x)); });
+  }
+
+  /* ---------- Rendering ---------- */
+  function renderKpis() {
+    var f = state.fleet;
+    var avail = f.filter(function (v) { return v.available; }).length;
+    var rented = f.length - avail;
+    var counts = { C: 0, B: 0, T: 0 };
+    f.forEach(function (v) { counts[v.type]++; });
+
+    document.getElementById("kTotal").textContent = f.length;
+    document.getElementById("kMix").textContent =
+      plural(counts.C, "car") + " · " + plural(counts.B, "bike") + " · " + plural(counts.T, "truck");
+    document.getElementById("kAvail").textContent = avail;
+    document.getElementById("kAvailPct").textContent = f.length ? Math.round(avail * 100 / f.length) + "% of fleet ready" : "—";
+    document.getElementById("kRented").textContent = rented;
+    var openValue = f.filter(function (v) { return !v.available; })
+      .reduce(function (s, v) { return s + estimate(v, v.units); }, 0);
+    document.getElementById("kRentedSub").textContent = rented ? rupeesShort(openValue) + " booked, before GST" : "Nothing out right now";
+    document.getElementById("kRevenue").textContent = rupeesShort(state.revenue);
+  }
+
+  function renderFleet() {
+    var box = document.getElementById("fleet");
+    box.textContent = "";
+    var q = state.query.toLowerCase();
+    var list = state.fleet.filter(function (v) {
+      if (state.type !== "ALL" && v.type !== state.type) return false;
+      if (state.status !== "ALL" && String(v.available ? 1 : 0) !== state.status) return false;
+      if (q && pretty(v.model).toLowerCase().indexOf(q) === -1) return false;
+      return true;
+    });
+
+    if (!list.length) {
+      box.appendChild(el("div", "empty", state.fleet.length ? "No vehicles match these filters." : "No vehicles yet. Add one in the C program (menu option 1), then load fleet.txt."));
+      return;
+    }
+
+    list.forEach(function (v) {
+      var card = el("article", "car");
+      var top = el("div", "car-top");
+      top.appendChild(el("span", "plate" + (v.type === "T" ? " commercial" : ""), "ID " + v.id));
+      top.appendChild(el("span", "pill " + (v.available ? "ok" : "busy"), v.available ? "Available" : "Rented"));
+      card.appendChild(top);
+
+      card.appendChild(el("h3", "model", pretty(v.model)));
+
+      var meta = el("div", "meta");
+      meta.appendChild(el("span", null, TYPE_NAME[v.type]));
+      if (v.type === "C") meta.appendChild(el("span", null, v.seats + " seats · " + pretty(v.fuel)));
+      if (v.type === "B") meta.appendChild(el("span", null, v.cc + " cc"));
+      if (v.type === "T") meta.appendChild(el("span", null, v.tons + " t load"));
+      card.appendChild(meta);
+
+      var rate = el("div", "rate", rupees(v.rate) + " ");
+      rate.appendChild(el("small", null, "per " + UNIT[v.type]));
+      card.appendChild(rate);
+
+      if (!v.available) {
+        var b = el("div", "booking");
+        var who = el("div");
+        who.appendChild(document.createTextNode("With "));
+        who.appendChild(el("b", null, pretty(v.rentedBy)));
+        who.appendChild(document.createTextNode(" · " + (v.type === "T" ? v.units + " km" : plural(v.units, UNIT[v.type])) + " booked"));
+        b.appendChild(who);
+        b.appendChild(el("div", "est", "Est. " + rupees(estimate(v, v.units)) + " + GST"));
+        card.appendChild(b);
+      }
+      box.appendChild(card);
+    });
+  }
+
+  function renderTypeChart() {
+    var box = document.getElementById("typeChart");
+    box.textContent = "";
+    var max = 0, rows = [];
+    ["C", "B", "T"].forEach(function (t) {
+      var all = state.fleet.filter(function (v) { return v.type === t; });
+      var avail = all.filter(function (v) { return v.available; }).length;
+      rows.push({ t: t, total: all.length, avail: avail, rented: all.length - avail });
+      if (all.length > max) max = all.length;
+    });
+    rows.forEach(function (r) {
+      var row = el("div", "bar-row");
+      var label = el("div", "bar-label");
+      label.appendChild(el("span", null, TYPE_NAME[r.t] + "s"));
+      label.appendChild(el("span", null, r.avail + " free / " + r.rented + " out"));
+      row.appendChild(label);
+      var track = el("div", "track");
+      track.setAttribute("role", "img");
+      track.setAttribute("aria-label", TYPE_NAME[r.t] + "s: " + r.avail + " available, " + r.rented + " rented");
+      if (max) {
+        var a = el("div", "seg-avail"); a.style.width = (r.avail / max * 100) + "%";
+        var b = el("div", "seg-rent"); b.style.width = (r.rented / max * 100) + "%";
+        track.appendChild(a); track.appendChild(b);
+      }
+      row.appendChild(track);
+      box.appendChild(row);
+    });
+  }
+
+  function renderRevChart() {
+    var box = document.getElementById("revChart");
+    box.textContent = "";
+    var byId = {};
+    state.history.forEach(function (h) {
+      if (h.action !== "RETURNED") return;
+      if (!byId[h.id]) byId[h.id] = { id: h.id, model: h.model, total: 0 };
+      byId[h.id].total += h.amount;
+    });
+    var rows = Object.keys(byId).map(function (k) { return byId[k]; })
+      .sort(function (a, b) { return b.total - a.total; });
+    if (!rows.length) {
+      box.appendChild(el("div", "empty", "No returns recorded yet."));
+      return;
+    }
+    var max = rows[0].total;
+    rows.forEach(function (r) {
+      var row = el("div", "bar-row");
+      var label = el("div", "bar-label");
+      label.appendChild(el("span", null, pretty(r.model)));
+      label.appendChild(el("span", null, rupeesShort(r.total)));
+      row.appendChild(label);
+      var track = el("div", "track");
+      track.setAttribute("role", "img");
+      track.setAttribute("aria-label", pretty(r.model) + ": " + rupees(r.total));
+      var fill = el("div", "seg-rent"); fill.style.width = (r.total / max * 100) + "%";
+      track.appendChild(fill);
+      row.appendChild(track);
+      box.appendChild(row);
+    });
+  }
+
+  function renderHistory() {
+    var body = document.getElementById("history");
+    body.textContent = "";
+    var rows = state.history.slice().reverse();     /* newest first */
+    document.getElementById("histCount").textContent = rows.length ? rows.length + (rows.length === 1 ? " entry" : " entries") + ", newest first" : "";
+    if (!rows.length) {
+      var tr = el("tr"); var td = el("td", "empty", "No history yet. Rent a vehicle in the C program (menu option 7), then load rentals.txt.");
+      td.colSpan = 5; tr.appendChild(td); body.appendChild(tr);
+      return;
+    }
+    rows.forEach(function (h) {
+      var tr = el("tr");
+      var t1 = el("td"); t1.appendChild(el("span", "tag " + (h.action === "RETURNED" ? "in" : "out"), h.action === "RETURNED" ? "RETURNED" : "RENTED"));
+      tr.appendChild(t1);
+      var t2 = el("td"); t2.textContent = pretty(h.model) + " ";
+      var idSpan = el("span", "chart-note", "#" + h.id); t2.appendChild(idSpan);
+      tr.appendChild(t2);
+      tr.appendChild(el("td", null, pretty(h.customer)));
+      tr.appendChild(el("td", "num", h.duration));
+      tr.appendChild(el("td", "num", rupees(h.amount) + (h.action === "RENTED" ? " est." : "")));
+      body.appendChild(tr);
+    });
+  }
+
+  function renderAll() {
+    renderKpis(); renderFleet(); renderTypeChart(); renderRevChart(); renderHistory();
+  }
+
+  /* ---------- Loading ---------- */
+  var statusEl = document.getElementById("status");
+  var chip = document.getElementById("sourceChip");
+
+  function setStatus(msg, isErr) {
+    statusEl.textContent = msg;
+    statusEl.className = isErr ? "err" : "";
+  }
+
+  function loadSample() {
+    var f = parseFleet(SAMPLE_FLEET);
+    state.fleet = f.fleet; state.revenue = f.revenue;
+    state.history = parseRentals(SAMPLE_RENTALS);
+    chip.textContent = "Showing sample data";
+    chip.className = "source-chip";
+    setStatus("Sample data uses the same file format as your C program. Load your own files to replace it.");
+    renderAll();
+  }
+
+  function readFiles(files) {
+    var list = Array.prototype.slice.call(files || []);
+    state.manual = true;            /* files picked by hand win over live updates */
+    if (!list.length) return;
+    var pending = list.length, loaded = [], errors = [];
+    list.forEach(function (file) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        var text = String(reader.result || "");
+        try {
+          if (looksLikeFleet(text)) {
+            var f = parseFleet(text);
+            state.fleet = f.fleet; state.revenue = f.revenue;
+            loaded.push(file.name + " (" + plural(f.fleet.length, "vehicle") + ")");
+          } else if (text.indexOf("|") !== -1) {
+            state.history = parseRentals(text);
+            loaded.push(file.name + " (" + state.history.length + " history lines)");
+          } else {
+            throw new Error(file.name + " isn't fleet.txt or rentals.txt from the rental program.");
+          }
+        } catch (e) { errors.push(e.message); }
+        done();
+      };
+      reader.onerror = function () { errors.push("Couldn't read " + file.name + ". Try selecting it again."); done(); };
+      reader.readAsText(file);
+    });
+    function done() {
+      if (--pending) return;
+      if (loaded.length) {
+        chip.textContent = "Loaded from your files";
+        chip.className = "source-chip live";
+      }
+      setStatus((loaded.length ? "Loaded " + loaded.join(" and ") + ". " : "") + errors.join(" "), errors.length > 0);
+      renderAll();
+    }
+  }
+
+  var input = document.getElementById("fileInput");
+  document.getElementById("pickBtn").addEventListener("click", function () { input.click(); });
+  input.addEventListener("change", function () { readFiles(input.files); input.value = ""; });
+  document.getElementById("sampleBtn").addEventListener("click", loadSample);
+
+  var zone = document.getElementById("dropZone");
+  ["dragenter", "dragover"].forEach(function (ev) {
+    zone.addEventListener(ev, function (e) { e.preventDefault(); zone.classList.add("drag"); });
+  });
+  ["dragleave", "drop"].forEach(function (ev) {
+    zone.addEventListener(ev, function (e) { e.preventDefault(); zone.classList.remove("drag"); });
+  });
+  zone.addEventListener("drop", function (e) { readFiles(e.dataTransfer && e.dataTransfer.files); });
+
+  /* ---------- Filters ---------- */
+  function wireSeg(id, key, attr) {
+    var seg = document.getElementById(id);
+    seg.addEventListener("click", function (e) {
+      var btn = e.target.closest("button");
+      if (!btn) return;
+      state[key] = btn.getAttribute(attr);
+      Array.prototype.forEach.call(seg.querySelectorAll("button"), function (b) {
+        b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+      });
+      renderFleet();
+    });
+  }
+  wireSeg("typeSeg", "type", "data-type");
+  wireSeg("statusSeg", "status", "data-status");
+  document.getElementById("search").addEventListener("input", function (e) {
+    state.query = e.target.value.trim();
+    renderFleet();
+  });
+
+  loadSample();
+
+  /* ---------- Live link with the C program ----------
+     Every time the C program saves, exportDashboard() rewrites dashboard_data.js
+     in this folder. A <script> tag can load a local file (fetch cannot), so the
+     page re-adds that script every 3 seconds and redraws only if the data changed. */
+  var lastLive = "";
+  function applyLive(data) {
+    if (state.manual || !data || !data.fleet) return;
+    var key = data.fleet.join("\n") + "#" + (data.rentals || []).join("\n");
+    if (key === lastLive) return;
+    lastLive = key;
+    try {
+      var f = parseFleet(data.fleet.join("\n"));
+      state.fleet = f.fleet; state.revenue = f.revenue;
+      state.history = parseRentals((data.rentals || []).join("\n"));
+      chip.textContent = "Live from C program";
+      chip.className = "source-chip live";
+      setStatus("Connected to the C program. Updated at " + new Date().toLocaleTimeString("en-IN") + ".");
+      renderAll();
+    } catch (e) { setStatus(e.message, true); }
+  }
+  function pollLive() {
+    var tag = document.createElement("script");
+    tag.src = "dashboard_data.js?t=" + Date.now();
+    tag.onload = function () { applyLive(window.RENTAL_DATA); tag.remove(); };
+    tag.onerror = function () { tag.remove(); };
+    document.head.appendChild(tag);
+  }
+  if (location.protocol === "file:") {
+    pollLive();
+    setInterval(pollLive, 3000);
+  }
+})();
+</script>
+
+</body>
+</html>

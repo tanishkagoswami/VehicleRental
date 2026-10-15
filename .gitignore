@@ -1,0 +1,14 @@
+# Compiled program
+rental
+rental.exe
+*.exe
+*.o
+
+# Data created when the program runs
+fleet.txt
+rentals.txt
+receipts.txt
+dashboard_data.js
+
+# Editor settings
+.vscode/
