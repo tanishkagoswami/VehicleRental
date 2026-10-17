@@ -110,29 +110,6 @@ union VehicleDetails {
 
 ---
 
-## Syllabus coverage
-
-Every topic in the four course modules is used where it fits the problem, not added just to tick a box. A full concept-to-function map is in the comment block at the top of [`vehicle_rental.c`](vehicle_rental.c).
-
-| Module | Concept | Where it is used |
-|---|---|---|
-| **1. Introduction to C** | Constants, expressions, operators | `#define` limits, `const GST_RATE`, bill arithmetic |
-| | Operator precedence | `truckRent()`: `rate * km + loadTons * 200` |
-| | Selection, logical operators, loops | `switch` menu, `do-while` input checks, `continue` in `displayAvailable()` |
-| | Debugging | `DEBUG` flag, plus notes on syntax, runtime and logical errors at the end of the file |
-| **2. Arrays and functions** | Call by value / by reference | `calcGST(float)` / `markRented(struct Vehicle *)` |
-| | Scope and `static` | Global fleet, local variables, `static receiptNo` |
-| | Recursion | `searchById()` binary search, `countAvailable()` |
-| | Strings | `strcpy`, `strcat`, `strcmp`, `strlen`, `strstr`; `replaceSpaces(char *)` |
-| **3. Pointers and memory** | Pointer arithmetic | `for (p = fleet; p < fleet + count; p++)` |
-| | Pointers and arrays | `fleet[mid]`, `*(fleet + mid)` and `fleet + mid` in `searchById()` |
-| | `malloc`, `calloc`, `realloc`, `free` | `ensureCapacity()`, `returnVehicle()`, `sortAndShow()` |
-| | Function pointers | `pricing[]`, comparator passed to `bubbleSort()` |
-| | NULL and dangling pointers | Every allocation and `fopen` checked; pointers set to `NULL` after `free` |
-| **4. Structures, unions, files** | Structures | `struct Vehicle`, `struct Rental`, struct copy and swap |
-| | Union | `union VehicleDetails` |
-| | File handling | `fopen`, `fclose`, `fprintf`, `fscanf`, `fgets`, `fputs` |
-
 ---
 
 ## Run it locally
@@ -212,12 +189,6 @@ VehicleRental/
 
 ---
 
-## Limitations
-
-- **Single user at a time.** There is no locking if two copies of the program run in the same folder.
-- **No dates.** Durations are entered by hand, because `time.h` is outside the course syllabus.
-- **Receipt numbers restart each run.** They come from a `static` counter, which is kept on purpose to show `static` scope.
-- **The dashboard is read-only.** Letting the page change data would need the C program to act as a web server using sockets, which is outside the syllabus.
 
 ## Roadmap
 
@@ -230,7 +201,7 @@ VehicleRental/
 
 <div align="center">
 
-Built by **[Tanishka Goswami](https://github.com/tanishkagoswami)** · BTech CSE (AI/ML), VIT-AP University
+Built by **[Tanishka](https://github.com/tanishkagoswami)** · BTech CSE (AI/ML), VIT-AP University
 
 <sub>C programming course project</sub>
 
