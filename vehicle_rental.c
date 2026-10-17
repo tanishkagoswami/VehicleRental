@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* ---------------------------- Constants ---------------------------- */
 #define MAX_MODEL        40
 #define MAX_NAME         40
 #define FUEL_LEN         10
@@ -35,11 +34,11 @@ union VehicleDetails {
 struct Vehicle {
     int   id;
     char  model[MAX_MODEL];
-    char  type;                    /* 'C', 'B' or 'T' - tells which union member is valid */
-    float rate;                    /* per day / per hour / per km */
-    int   isAvailable;             /* 1 = available, 0 = rented */
-    int   bookedUnits;             /* days / hours / km booked */
-    char  rentedBy[MAX_NAME];      /* "-" when not rented */
+    char  type;                    
+    float rate;                    
+    int   isAvailable;             
+    int   bookedUnits;             
+    char  rentedBy[MAX_NAME];      
     union VehicleDetails info;
 };
 
@@ -54,15 +53,14 @@ struct Rental {
     float total;
 };
 
-/* ------------------------ Global variables ------------------------ */
-struct Vehicle *fleet = NULL;   /* dynamic array of vehicles */
-int   count        = 0;         /* vehicles currently stored */
-int   capacity     = 0;         /* space allocated */
+
+struct Vehicle *fleet = NULL;   
+int   count        = 0;         
+int   capacity     = 0;         
 int   nextId       = 101;
 float totalRevenue = 0.0f;
 
-/* ------------------------ Function prototypes ------------------------ */
-/* input helpers */
+
 void  clearInput(void);
 void  endOfInput(void);
 int   readInt(const char *prompt);
@@ -82,18 +80,17 @@ float bikeRent(struct Vehicle *v, int hours);
 float truckRent(struct Vehicle *v, int km);
 float calcGST(float amount);
 
-/* memory */
+
 int  ensureCapacity(void);
 void freeFleet(void);
 
-/* display */
+
 void printHeader(void);
 void printVehicle(struct Vehicle v);
 void displayAll(void);
 void displayAvailable(void);
 int  countAvailable(int index);
 
-/* search and sort */
 struct Vehicle *searchById(int low, int high, int id);
 void searchByIdMenu(void);
 void searchByModel(const char *key);
@@ -103,7 +100,6 @@ int  compareByModel(struct Vehicle *a, struct Vehicle *b);
 void bubbleSort(struct Vehicle *arr, int n, int (*cmp)(struct Vehicle *, struct Vehicle *));
 void sortAndShow(void);
 
-/* core operations */
 void addVehicle(void);
 void markRented(struct Vehicle *v, const char *customer, int units);
 void markReturned(struct Vehicle *v);
@@ -112,7 +108,6 @@ void returnVehicle(void);
 void printBill(struct Rental *r, struct Vehicle *v);
 void revenueReport(void);
 
-/* files */
 void saveFleet(void);
 void loadFleet(void);
 void logEvent(const char *action, struct Vehicle *v, const char *customer, int units, float amount);
@@ -124,10 +119,8 @@ void openDashboard(void);
 
 void printMenu(void);
 
-/* Array of function pointers: index 0 = Car, 1 = Bike, 2 = Truck */
 float (*pricing[3])(struct Vehicle *, int) = { carRent, bikeRent, truckRent };
 
-/* ============================== main ============================== */
 int main(void)
 {
     int choice;
@@ -184,9 +177,7 @@ void printMenu(void)
     printf("----------------------------------------\n");
 }
 
-/* ========================== Input helpers ========================== */
 
-/* Removes leftover characters (like '\n') after scanf */
 void clearInput(void)
 {
     int c;
@@ -194,7 +185,6 @@ void clearInput(void)
         ;
 }
 
-/* Called if input ends unexpectedly - saves data so nothing is lost */
 void endOfInput(void)
 {
     printf("\nInput ended. Saving data and exiting.\n");
@@ -245,7 +235,6 @@ char readChar(const char *prompt)
     return c;
 }
 
-/* Reads a full line (spaces allowed) using fgets and removes the '\n' */
 void readLine(const char *prompt, char *buffer, int size)
 {
     int len;
@@ -259,18 +248,15 @@ void readLine(const char *prompt, char *buffer, int size)
         buffer[len - 1] = '\0';
 }
 
-/* String passed to a function and changed through a pointer.
-   Spaces become '_' so the word can be stored and read with fscanf %s. */
 void replaceSpaces(char *s)
 {
     while (*s != '\0') {
         if (*s == ' ')
             *s = '_';
-        s++;                        /* pointer arithmetic: move to next character */
+        s++;                        
     }
 }
 
-/* ========================== Type helpers ========================== */
 
 int typeIndex(char type)
 {
@@ -302,20 +288,18 @@ const char *unitName(char type)
     }
 }
 
-/* ============================ Pricing ============================ */
 
 float carRent(struct Vehicle *v, int days)
 {
     float amount = v->rate * days;
 
     if (v->info.car.seats > 5)
-        amount = amount + amount * 0.10f;      /* bigger cars cost 10% more */
+        amount = amount + amount * 0.10f;      
     if (days >= 7)
-        amount = amount - amount * 0.10f;      /* weekly discount */
+        amount = amount - amount * 0.10f;      
     return amount;
 }
 
-/* 'hours' is passed BY VALUE: changing it here does not affect the caller */
 float bikeRent(struct Vehicle *v, int hours)
 {
     float amount;
@@ -330,19 +314,16 @@ float bikeRent(struct Vehicle *v, int hours)
 
 float truckRent(struct Vehicle *v, int km)
 {
-    /* Precedence: both multiplications happen before the addition */
     return v->rate * km + v->info.truck.loadTons * 200;
 }
 
-/* Call by value */
+
 float calcGST(float amount)
 {
     return amount * GST_RATE;
 }
 
-/* ======================= Memory management ======================= */
 
-/* Returns 1 if there is room for one more vehicle, 0 if memory failed */
 int ensureCapacity(void)
 {
     struct Vehicle *temp;
@@ -357,7 +338,6 @@ int ensureCapacity(void)
         if (DEBUG) printf("[DEBUG] calloc: space for %d vehicles\n", capacity);
     }
     else if (count == capacity) {
-        /* realloc into a temporary pointer: if it fails, 'fleet' is still safe */
         temp = (struct Vehicle *) realloc(fleet, capacity * 2 * sizeof(struct Vehicle));
         if (temp == NULL) {
             printf("Error: could not expand memory.\n");
@@ -373,12 +353,11 @@ int ensureCapacity(void)
 void freeFleet(void)
 {
     free(fleet);
-    fleet = NULL;          /* avoid a dangling pointer */
+    fleet = NULL;          
     count = 0;
     capacity = 0;
 }
 
-/* ============================ Display ============================ */
 
 void printHeader(void)
 {
@@ -387,7 +366,6 @@ void printHeader(void)
     printf("--------------------------------------------------------------------------\n");
 }
 
-/* Structure passed BY VALUE - a copy is printed, original is untouched */
 void printVehicle(struct Vehicle v)
 {
     printf("%-5d %-18s %-6s %8.2f/%-5s %-10s ",
@@ -404,7 +382,6 @@ void printVehicle(struct Vehicle v)
     printf("\n");
 }
 
-/* Pointer arithmetic to move through the array */
 void displayAll(void)
 {
     struct Vehicle *p;
@@ -419,11 +396,10 @@ void displayAll(void)
     printf("Total vehicles: %d\n", count);
 }
 
-/* Recursion: counts available vehicles from 'index' to the end */
 int countAvailable(int index)
 {
     if (index == count)
-        return 0;                                   /* base case */
+        return 0;                                  
     return fleet[index].isAvailable + countAvailable(index + 1);
 }
 
@@ -438,26 +414,20 @@ void displayAvailable(void)
     printHeader();
     for (i = 0; i < count; i++) {
         if (!fleet[i].isAvailable)
-            continue;                               /* skip rented vehicles */
+            continue;                              
         printVehicle(fleet[i]);
     }
     printf("Available: %d of %d\n", available, count);
 }
 
-/* ======================== Search and sort ======================== */
-
-/* Recursive binary search. Works because IDs are added in increasing order.
-   Returns a pointer to the vehicle, or NULL if not found. */
 struct Vehicle *searchById(int low, int high, int id)
 {
     int mid;
 
     if (low > high)
-        return NULL;                                /* base case: not found */
-
+        return NULL;                              
     mid = (low + high) / 2;
 
-    /* fleet[mid], *(fleet + mid) and (fleet + mid)-> all mean the same element */
     if (fleet[mid].id == id)
         return fleet + mid;
     else if ((*(fleet + mid)).id < id)
@@ -479,7 +449,6 @@ void searchByIdMenu(void)
     printVehicle(*v);
 }
 
-/* String passed to a function; strstr finds partial matches */
 void searchByModel(const char *key)
 {
     int i, found = 0;
@@ -521,7 +490,6 @@ int compareByModel(struct Vehicle *a, struct Vehicle *b)
     return strcmp(a->model, b->model);
 }
 
-/* 'cmp' is a function pointer - the same sort works for any comparison */
 void bubbleSort(struct Vehicle *arr, int n, int (*cmp)(struct Vehicle *, struct Vehicle *))
 {
     int i, j;
@@ -530,7 +498,7 @@ void bubbleSort(struct Vehicle *arr, int n, int (*cmp)(struct Vehicle *, struct 
     for (i = 0; i < n - 1; i++) {
         for (j = 0; j < n - 1 - i; j++) {
             if (cmp(&arr[j], &arr[j + 1]) > 0) {
-                temp = arr[j];              /* whole structure copied at once */
+                temp = arr[j];             
                 arr[j] = arr[j + 1];
                 arr[j + 1] = temp;
             }
@@ -538,7 +506,6 @@ void bubbleSort(struct Vehicle *arr, int n, int (*cmp)(struct Vehicle *, struct 
     }
 }
 
-/* Sorts a COPY, so the original stays in ID order for binary search */
 void sortAndShow(void)
 {
     int choice, i;
@@ -575,10 +542,9 @@ void sortAndShow(void)
         printVehicle(copy[i]);
 
     free(copy);
-    copy = NULL;           /* avoid a dangling pointer */
+    copy = NULL;        
 }
 
-/* ========================= Core operations ========================= */
 
 void addVehicle(void)
 {
@@ -590,7 +556,7 @@ void addVehicle(void)
 
     type = readChar("Vehicle type (C = Car, B = Bike, T = Truck): ");
     if (type >= 'a' && type <= 'z')
-        type = type - 32;                     /* lowercase to uppercase */
+        type = type - 32;                    
     if (typeIndex(type) == -1) {
         printf("Invalid vehicle type.\n");
         return;
@@ -607,7 +573,6 @@ void addVehicle(void)
         v.rate = readFloat("(Rs): ");
     } while (v.rate <= 0);
 
-    /* Fill only the union member that matches the type */
     switch (type) {
         case 'C':
             do {
@@ -635,13 +600,12 @@ void addVehicle(void)
     strcpy(v.rentedBy, "-");
     v.id = nextId++;
 
-    fleet[count] = v;                         /* structure assignment */
+    fleet[count] = v;                        
     count++;
     saveFleet();
     printf("%s added successfully with ID %d.\n", typeName(type), v.id);
 }
 
-/* Call by reference: the original vehicle in the array is changed */
 void markRented(struct Vehicle *v, const char *customer, int units)
 {
     v->isAvailable = 0;
@@ -689,7 +653,7 @@ void rentVehicle(void)
 
     markRented(v, customer, units);
 
-    /* Calling the correct pricing function through the function pointer array */
+    
     estimate = pricing[typeIndex(v->type)](v, units);
     printf("Vehicle %d rented to %s for %d %s(s).\n", v->id, customer, units, unitName(v->type));
     printf("Estimated charge: Rs %.2f + GST\n", estimate);
@@ -753,7 +717,7 @@ void returnVehicle(void)
     saveFleet();
 
     free(r);
-    r = NULL;              /* r no longer points to freed memory */
+    r = NULL;              
 }
 
 void printBill(struct Rental *r, struct Vehicle *v)
@@ -792,11 +756,7 @@ void revenueReport(void)
     printf("==================================\n");
 }
 
-/* ========================== File handling ========================== */
 
-/* File format:
-   first line : nextId totalRevenue count
-   each line  : id model type rate available units rentedBy <type-specific fields> */
 void saveFleet(void)
 {
     FILE *fp;
@@ -822,17 +782,17 @@ void saveFleet(void)
     fclose(fp);
     if (DEBUG) printf("[DEBUG] Saved %d vehicle(s) to %s\n", count, FLEET_FILE);
 
-    exportDashboard();             /* keep the web dashboard in sync */
+    exportDashboard();
 }
 
 void loadFleet(void)
 {
     FILE *fp;
     struct Vehicle v;
-    int n, i, ok;
+    int n, i;
 
     fp = fopen(FLEET_FILE, "r");
-    if (fp == NULL) {                 /* first run: file does not exist yet */
+    if (fp == NULL) {                 
         printf("No saved data found. Starting with an empty fleet.\n");
         return;
     }
@@ -851,7 +811,7 @@ void loadFleet(void)
                    &v.isAvailable, &v.bookedUnits, v.rentedBy) != 7)
             break;
 
-        ok = 0;
+        int ok = 0;
         switch (v.type) {
             case 'C': ok = (fscanf(fp, "%d %9s", &v.info.car.seats, v.info.car.fuel) == 2); break;
             case 'B': ok = (fscanf(fp, "%d", &v.info.bike.engineCC) == 1);                  break;
@@ -867,7 +827,6 @@ void loadFleet(void)
     printf("Loaded %d vehicle(s) from %s.\n", count, FLEET_FILE);
 }
 
-/* Appends one line to the rental history */
 void logEvent(const char *action, struct Vehicle *v, const char *customer, int units, float amount)
 {
     FILE *fp = fopen(RENTAL_LOG, "a");
@@ -883,7 +842,7 @@ void logEvent(const char *action, struct Vehicle *v, const char *customer, int u
 
 void writeReceipt(struct Rental *r, struct Vehicle *v)
 {
-    static int receiptNo = 1;      /* static: keeps its value between calls */
+    static int receiptNo = 1;      
     char line[100];
     FILE *fp = fopen(RECEIPT_FILE, "a");
 
@@ -918,7 +877,7 @@ void writeReceipt(struct Rental *r, struct Vehicle *v)
     receiptNo++;
 }
 
-/* Reads the history file line by line with fgets */
+
 void viewHistory(void)
 {
     char line[200];
@@ -939,10 +898,7 @@ void viewHistory(void)
     fclose(fp);
 }
 
-/* ======================= Dashboard link ======================= */
 
-/* Copies each line of a text file into a JavaScript array of strings.
-   A '"' or '\\' inside a line would break the JS string, so it gets a '\\' before it. */
 void writeJsLines(FILE *out, const char *key, const char *fileName)
 {
     char line[256];
@@ -955,9 +911,9 @@ void writeJsLines(FILE *out, const char *key, const char *fileName)
         while (fgets(line, 256, in) != NULL) {
             len = strlen(line);
             while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r'))
-                line[--len] = '\0';           /* remove line ending */
+                line[--len] = '\0';           
             if (len == 0)
-                continue;                     /* skip blank lines */
+                continue;                     
 
             fputs("    \"", out);
             for (p = line; *p != '\0'; p++) {
@@ -972,7 +928,7 @@ void writeJsLines(FILE *out, const char *key, const char *fileName)
     fputs("  ]", out);
 }
 
-/* Writes dashboard_data.js:  window.RENTAL_DATA = { fleet: [...], rentals: [...] }; */
+
 void exportDashboard(void)
 {
     FILE *out = fopen(DASHBOARD_DATA, "w");
@@ -991,7 +947,7 @@ void exportDashboard(void)
     if (DEBUG) printf("[DEBUG] Dashboard data updated in %s\n", DASHBOARD_DATA);
 }
 
-/* Opens the dashboard in the default browser using system() from stdlib.h */
+
 void openDashboard(void)
 {
     int result;
@@ -1003,8 +959,7 @@ void openDashboard(void)
     }
     fclose(check);
 
-    saveFleet();                   /* make sure the dashboard has the latest data */
-
+    saveFleet();                   
 #ifdef _WIN32
     result = system("start \"\" " DASHBOARD_PAGE);
 #elif defined(__APPLE__)
@@ -1019,30 +974,3 @@ void openDashboard(void)
         printf("Dashboard opened. It refreshes every 3 seconds while this program runs.\n");
 }
 
-/*
- * ==========================================================================
- * DEBUGGING NOTES (Module 1 - Debugging Fundamentals)
- * ==========================================================================
- * Syntax error:
- *   Forgetting the ';' after the closing '}' of struct Vehicle gives a
- *   compiler error on the NEXT line, which is confusing. Fix: check the
- *   line just above where the compiler points.
- *
- * Runtime error:
- *   Using fp from fopen() without checking for NULL crashes the program on
- *   the first run, because fleet.txt does not exist yet. Fix: every fopen()
- *   and malloc() result is checked against NULL before use.
- *
- * Logical error:
- *   Writing the late fee as  actual - booked * rate  compiles fine but gives
- *   a wrong answer, because * runs before -. Fix: (actual - booked) * rate.
- *
- *   Using scanf("%d") followed by fgets() made fgets read the leftover '\n'
- *   and skip the input. Fix: clearInput() after every scanf.
- *
- * Debugging techniques used:
- *   - DEBUG flag prints memory and file activity ([DEBUG] lines)
- *   - Testing each feature right after writing it
- *   - Printing values of variables when a result looks wrong
- * ==========================================================================
- */
